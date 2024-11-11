@@ -1,0 +1,78 @@
+- name: Update and upgrade packages
+  apt:
+    update_cache: yes
+    upgrade: dist
+    cache_valid_time: 3600
+
+- name: Install essential packages
+  apt:
+    name:
+      - net-tools
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+      - python3-passlib
+    state: present
+
+- name: Add Docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Setup Docker repository
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable
+    state: present
+
+- name: Update apt package repositories
+  apt:
+    update_cache: yes
+
+- name: Install docker
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: Create a non-root user
+  user:
+    name: dodskorpen
+    groups: sudo,docker
+    append: true
+    shell: /bin/bash
+    create_home: yes
+
+- name: Set a password for the user
+  user:
+    name: dodskorpen
+    password: "{{ 'this is the chaos' | password_hash('sha512') }}"
+
+- name: Ensure .ssh directory exists for dodskorpen
+  file:
+    path: /home/dodskorpen/.ssh
+    state: directory
+    mode: '0700'
+    owner: dodskorpen
+    group: dodskorpen
+
+- name: Copy contents from /root/.ssh to /home/dodskorpen/.ssh
+  copy:
+    src: /root/.ssh/
+    dest: /home/dodskorpen/.ssh/
+    owner: dodskorpen
+    group: dodskorpen
+    mode: '0600'                      
+    remote_src: yes                   
+
+- name: Set permissions for dodskorpen's .ssh directory
+  file:
+    path: /home/dodskorpen/.ssh
+    state: directory
+    mode: '0700'
+    owner: dodskorpen
+    group: dodskorpen

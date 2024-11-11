@@ -1,0 +1,6 @@
+- name: Configure Digital Ocean Droplets
+  hosts: vps
+  become: true
+
+  roles:
+    - common

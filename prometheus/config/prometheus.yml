@@ -1,0 +1,32 @@
+global:
+  # How often to scrape the objects
+  scrape_interval: 15s
+  # How often to evaluate rules
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+alerting:
+  alertmanagers:
+    - timeout: "10s"
+      api_version: v2
+      path_prefix: /
+      scheme: http
+      follow_redirects: true
+      static_configs:
+        - targets: []
+
+scrape_configs:
+  - job_name: "prometheus"
+    honor_timestamps: true
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ["localhost:9090"]
+    basic_auth:
+      username: dodskorpen
+      password: "this is the chaos"
+  # - job_name: "grafana"
+  #   static_configs:
+  #     - targets: ["localhost:3000"]
