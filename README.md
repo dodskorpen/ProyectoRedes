@@ -24,6 +24,21 @@ Objetivos del proyecto
 
 https://developer.hashicorp.com/terraform/tutorials/docker-get-started/install-cli
 
+## Digital Ocean
+
+Para el VPS que sera el monitor, copiaremos el archivo docker-compose.yml via scp asi como tambien la carpeta que contiene las configuraciones de prometheus:
+
+```sh
+scp ./docker-compose.yml dodskorpen@152.42.154.204:/home/dodskorpen/app
+scp -r prometheus dodskorpen@152.42.154.204:/home/dodskorpen/app
+```
+
+Para el VPS que sera el VPN, copiaremos el archivo docker-compose-vpn.yml via scp:
+
+```sh
+scp ./docker-compose-vpn.yml dodskorpen@152.42.154.206:/home/dodskorpen/app
+```
+
 ## Generacion de un par de llaves ssh para Digital Ocean
 
 ```sh
@@ -102,3 +117,109 @@ ansible-playbook playbooks/setup_vps.yml
 
 
 ### OpenVPN
+
+
+```sh
+apt install openvpn easy-rsa
+```
+
+La CA que crearemos tiene el siguiente nombre:
+
+```
+CA: thetunnel-CA
+```
+
+La passphrase del servidor es:
+
+```
+225837c59227167d4f455e6c05a5c6c0aa294c9421c9a8f9ca380d69780bdeeb
+```
+
+Generar las llaves del servidor y el certificado:
+
+```sh
+./easyrsa gen-req the-vpn nopass
+CA: thevpn-CA
+```
+
+Generar los parametros Diffie-Hellman:
+
+```sh
+./easyrsa gen-dh
+```
+
+Crear el certificado para el servidor (preguntara por la passphrase que ingresamos anteriormente)
+
+```sh
+./easyrsa sign-req server the-vpn
+```
+
+Copiar los certificados generados a la carpeta "/etc/openvpn" (practica comun):
+
+```sh
+cp pki/dh.pem pki/ca.crt pki/issued/the-vpn.crt pki/private/the-vpn.key /etc/openvpn
+```
+
+Copiar la configuracion basica del servidor OpenVPN:
+
+```sh
+cp /usr/share/doc/openvpn/examples/sample-config-files/server.conf /etc/openvpn/
+```
+
+Generar una llave TLS/SSL
+```sh
+openvpn --genkey --secret ta.key
+```
+
+Quitar el comentario siguiente del archivo "/etc/sysctl.conf":
+
+```sh
+#net.ipv4.ip_forward=1
+```
+
+Generar un certificado para el cliente
+```
+./easyrsa gen-req client_1 nopass
+Common Name (CN): zjukd00n
+```
+
+**Configuracion del servidor OpenVPN**
+```
+local 10.17.0.5 # Important to add. Run 'ip a' to select the right IP address
+port 1194
+proto udp
+dev tun
+ca ca.crt
+cert the-vpn.crt
+key the-vpn.key  # This file should be kept secret
+dh dh.pem
+server 10.8.0.0 255.255.255.0
+ifconfig-pool-persist /var/log/openvpn/ipp.txt
+keepalive 10 120
+tls-auth ta.key 0 # This file is secret
+cipher AES-256-CBC
+persist-key
+persist-tun
+status /var/log/openvpn/openvpn-status.log
+verb 3
+explicit-exit-notify 1
+```
+
+**Configuracion del cliente OpenVPN**
+```
+client
+dev tun
+proto udp
+remote 152.42.154.206 1194 # Static IP address of the VPN server
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+ca ca.crt
+cert client_1.crt
+key client_1.key
+remote-cert-tls server
+tls-auth ta.key 1
+cipher AES-256-CBC
+verb 3
+```

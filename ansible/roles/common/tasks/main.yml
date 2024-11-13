@@ -76,3 +76,10 @@
     mode: '0700'
     owner: dodskorpen
     group: dodskorpen
+
+- name: Create the main app directory
+  ansible.builtin.file:
+    path: /home/dodskorpen/app
+    state: directory
+    mode: '0755'
+    owner: dodskorpen
